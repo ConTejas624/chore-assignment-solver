@@ -14,11 +14,19 @@ CHORE_ASSIGNMENT_COUNTS = {
 DEFAULT_ASSIGNMENT_COUNT = 1
 
 # Pairs of chores a person cannot hold in the same week, nor in adjacent
-# weeks (in either direction — e.g. Reg 9-10 this week, Reg 8-9 next week).
+# weeks (in either direction - e.g. Reg 9-10 this week, Reg 8-9 next week).
 CONFLICT_PAIRS = [
     (
         "Registration 8-9",
         "Registration 9-10",
+    ),
+    (
+        "Registration 8-9",
+        "Team Announcements",
+    ),
+    (
+        "Registration 9-10",
+        "Team Announcements",
     ),
 ]
 
@@ -157,11 +165,24 @@ def optimize_schedule(people, chores, preferences, total_weeks, runtime):
 
     # 5b. Chore groups: paired chores count as ONE chore for repeat tracking
     groups = {c: [c] for c in chores}  # start as singletons
+
+    # Build conflict groups - each unique chore becomes part of a group
+    processed = set()
     for chore_a, chore_b in CONFLICT_PAIRS:
-        # Both members fold into one group keyed by the pair itself
-        groups[(chore_a, chore_b)] = [chore_a, chore_b]
+        if chore_a in processed or chore_b in processed:
+            # These already belong to a group (conflict chains can overlap)
+            continue
+
+        # Create a group for this conflict pair
+        group_key = f"group_{chore_a}_{chore_b}"
+        groups[group_key] = [chore_a, chore_b]
+
+        # Remove individual chore entries
         del groups[chore_a]
         del groups[chore_b]
+
+        processed.add(chore_a)
+        processed.add(chore_b)
 
     # Weekly group membership: y[w, p, g] == 1 if person p does ANY chore
     # from group g in week w. (Safe: the conflict constraint already caps
